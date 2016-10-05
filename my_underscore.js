@@ -56,22 +56,23 @@
     __.reduceRight = __.foldr = createReduce(-1);
 
     __.find = function(obj, fn){
-        var keys = !isArrayLike(obj) && __.keys(obj);
-        var length = (keys || obj).length;
-        var results = Array(length);
-        for(var i = 0; i < length; i++){
-            var currentKey = keys ? keys[i] : i;
-            if(fn(obj[currentKey], currentKey, obj)){
-                return obj[currentKey];
-            }
-        }
-        return void 0;
+        var key = isArrayLike(obj) ? __.findIndex(obj, fn) : __.findKey(obj, fn);
+        if(key !== void 0 && key > -1) return obj[key];
     };
 
-    //这两个方法限定了ArrayLike 这个版本的find没用到
-    __.findIndex = createPredicateIndexFinder(1);
-    __.findLastIndex = createPredicateIndexFinder(-1);
+    //underscore中的filter只是针对于ArrayLike 而对应的Object中是pick方法
+    __.filter = function(obj, fn){
+        var isArray = isArrayLike(obj), results;
+        results = isArray ? [] : {};
+        __.each(obj, function(value, index, list){
+            if(fn(value, index, list)){
+                var temp = isArray ? results.push(value) : results[index] = value;
+            }
+        });
+        return results;
+    };
 
+    //这两个方法限定了ArrayLike
     var createPredicateIndexFinder = function(dir){
         var finder = function(array, fn){
             var length = array['length'];
@@ -83,6 +84,17 @@
         };
         return function(array, fn){
             return finder(array, fn);
+        }
+    };
+
+    __.findIndex = createPredicateIndexFinder(1);
+    __.findLastIndex = createPredicateIndexFinder(-1);
+
+    __.findKey = function(obj, fn){
+        var keys = __.keys(obj);
+        var length  = keys.length;
+        for(var index = 0; index < length; index++){
+            if(fn(obj[keys[index]], keys[index], obj)) return keys[index];
         }
     };
 
