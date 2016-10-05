@@ -33,11 +33,13 @@
     };
 
     var createReduce = function(obj, fn){
-        var index = !isArrayLike(obj) && __.keys(obj);
-        var length = (index || obj).length;
-        var results;
-        for(var i = 0; i < length; i++){
-            var currentKey = index ? index[i] : i;
+        var keys = !isArrayLike(obj) && __.keys(obj);
+        var length = (keys || obj).length;
+        var index = 0;
+        var results = obj[keys ? keys[index] : index];
+        index++;
+        for(; index >= 0 && index < length; index++){
+            var currentKey = keys ? keys[index] : index;
             results = fn(results ,obj[currentKey], currentKey, obj);
         }
         return results;

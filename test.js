@@ -10,4 +10,4 @@ var b = {
 };
 document.querySelector('#test1').innerHTML = _.map(a, function(value){return ++value;});
 document.querySelector('#test2').innerHTML = __.map(a, function(value){return --value;});
-document.querySelector('#test3').innerHTML = __.reduce(a, function(a,b){return a+b;});
+document.querySelector('#test3').innerHTML = __.reduce(b, function(a,b){return a + ' ' + b;});
