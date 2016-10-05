@@ -92,16 +92,55 @@
         return false;
     };
 
-    //老版的遍历
     __.contains = __.include = __.includes = function(obj, item, fromIndex){
-        var keys = !isArrayLike(obj) && __.keys(obj);
-        var length = (keys || obj).length;
-        for(var i = 0; i < length; i++){
-            var currentKey = keys ? keys[i] : i;
-            if(item === obj[currentKey]) return true;
-        }
-        return false;
+        if(!isArrayLike(obj)) obj = __.keys(obj);
+        if(typeof fromIndex != 'number') fromIndex = 0;
+        return __.indexOf(obj, item, fromIndex) >= 0;
     };
+
+    __.where = function(obj, attr){
+        return __.filter(obj, __.matcher(attr));
+    };
+
+    __.matcher = __.matches = function(attrs){
+        attrs = __.extendOwn({}, attrs);
+        return function(obj) {
+            return __.isMatch(obj, attrs);
+        };
+    };
+
+    // 无法解决{c:2} == {c:2}为false的问题 待优化
+    __.isMatch = function(object, attrs){
+        var keys = __.keys(attrs);
+        var length = keys.length;
+        if (object == null) return !length;
+        var obj = Object(object);
+        for (var i = 0; i < length; i++) {
+            var key = keys[i];
+            if (attrs[key] !== obj[key] || !(key in obj)) return false;
+        }
+        return true;
+    };
+
+    var createAssigner = function(keysFunc) {
+        return function(obj) {
+            var length = arguments.length;
+            if (length < 2 || obj == null) return obj;
+            for (var index = 1; index < length; index++) {
+                var source = arguments[index],
+                    keys = keysFunc(source),
+                    l = keys.length;
+                for (var i = 0; i < l; i++) {
+                    var key = keys[i];
+                    if (obj[key] === void 0) obj[key] = source[key];
+                }
+            }
+            return obj;
+        };
+    };
+
+    __.extend = createAssigner(__.allKeys);
+    __.extendOwn = __.assign = createAssigner(__.keys);
 
     __.negate = function(fn){
         return function(){
