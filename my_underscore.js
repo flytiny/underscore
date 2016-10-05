@@ -60,16 +60,53 @@
         if(key !== void 0 && key > -1) return obj[key];
     };
 
-    //underscore中的filter只是针对于ArrayLike 而对应的Object中是pick方法
     __.filter = function(obj, fn){
-        var isArray = isArrayLike(obj), results;
-        results = isArray ? [] : {};
+        var results = [];
         __.each(obj, function(value, index, list){
-            if(fn(value, index, list)){
-                var temp = isArray ? results.push(value) : results[index] = value;
-            }
+            if(fn(value, index, list)) results.push(value);
         });
         return results;
+    };
+
+    __.reject = function(obj, fn){
+        return __.filter(obj, __.negate(fn));
+    };
+
+    __.every = function(obj, fn){
+        var keys = !isArrayLike(obj) && __.keys(obj);
+        var length = (keys || obj).length;
+        for(var i = 0; i < length; i++){
+            var currentKey = keys ? keys[i] : i;
+            if(!fn(obj[currentKey], currentKey, obj)) return false;
+        }
+        return true;
+    };
+
+    __.some = __.any = function(obj, fn){
+        var keys = !isArrayLike(obj) && __.keys(obj);
+        var length = (keys || obj).length;
+        for(var i = 0; i < length; i++){
+            var currentKey = keys ? keys[i] : i;
+            if(fn(obj[currentKey], currentKey, obj)) return true;
+        }
+        return false;
+    };
+
+    //老版的遍历
+    __.contains = __.include = __.includes = function(obj, item, fromIndex){
+        var keys = !isArrayLike(obj) && __.keys(obj);
+        var length = (keys || obj).length;
+        for(var i = 0; i < length; i++){
+            var currentKey = keys ? keys[i] : i;
+            if(item === obj[currentKey]) return true;
+        }
+        return false;
+    };
+
+    __.negate = function(fn){
+        return function(){
+            return !fn.apply(this,arguments);
+        }
     };
 
     //这两个方法限定了ArrayLike
@@ -111,6 +148,16 @@
             if (__.has(obj, key)) keys.push(key);
         }
         return results;
+    };
+
+    __.values = function(obj){
+        var keys = __.keys(obj);
+        var length = keys.length;
+        var values = Array(length);
+        for (var i = 0; i < length; i++) {
+            values[i] = obj[keys[i]];
+        }
+        return values;
     };
 
     __.allKeys = function(obj){
