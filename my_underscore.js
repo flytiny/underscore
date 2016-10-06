@@ -13,6 +13,12 @@
         root.__ = __;
     }
 
+    var cb = function(value) {
+        if (__.isFunction(value)) return value;
+        if (__.isObject(value)) return __.matcher(value);
+        return __.property(value);
+    };
+
     __.each = __.foreach = function(obj, fn) {
         var keys = !isArrayLike(obj) && __.keys(obj);
         var length = (keys || obj).length;
@@ -167,7 +173,7 @@
         });
     };
 
-
+    // the min method is similar to the max method
     // __.max = function(obj, iteratee) {
     //     var result;
     //     var resultIndex
@@ -209,14 +215,135 @@
         return result;
     };
 
+    __.min = function(obj, iteratee) {
+        var result = Infinity,
+            lastComputed = Infinity,
+            value, computed;
+        if (iteratee == null || (typeof iteratee == 'number' && typeof obj[0] != 'object') && obj != null) {
+            obj = isArrayLike(obj) ? obj : __.values(obj);
+            for (var i = 0, length = obj.length; i < length; i++) {
+                value = obj[i];
+                if (value != null && value < result) {
+                    result = value;
+                }
+            }
+        } else {
+            __.each(obj, function(v, index, list) {
+                computed = iteratee(v, index, list);
+                if (computed < lastComputed || result === Infinity) {
+                    result = v;
+                    lastComputed = computed;
+                }
+            });
+        }
+        return result;
+    };
 
+    __.sample = function(obj, n) {
+        if (n == null) {
+            if (!isArrayLike(obj)) obj = __.values(obj);
+            return obj[__.random(obj.length - 1)];
+        }
+        //prevent changing the origin obj
+        var sample = isArrayLike(obj) ? __.clone(obj) : __.values(obj);
+        var length = sample['length'];
+        for (var index = 0; index < length; index++) {
+            var temp = sample[index];
+            var random = __.random(sample.length - 1);
+            sample[index] = sample[random];
+            sample[random] = temp;
+        }
+        return sample.slice(0, n);
+    };
 
+    __.shuffle = function(obj) {
+        return __.sample(obj, Infinity);
+    };
+
+    __.sortBy = function(obj, iteratee) {
+        iteratee = cb(iteratee);
+        var index = 0;
+        return __.pluck(__.map(obj, function(value, key, list) {
+            return {
+                value: value,
+                index: index++,
+                criteria: iteratee(value, key, list)
+            };
+        }).sort(function(left, right) {
+            var a = left.criteria;
+            var b = right.criteria;
+            if (a !== b) {
+                if (a > b || a === void 0) return 1;
+                if (a < b || b === void 0) return -1;
+            }
+            return left.index - right.index;
+        }), 'value');
+    };
+
+    //groupBy / indexBy / countBy is vary similar
+    // __.groupBy = function(obj, iteratee){
+    //     iteratee = cb(iteratee);
+    //     var result = {};
+    //     __.each(obj, function(value, item){
+    //         var temp = iteratee(value);
+    //         if(!result[temp]) result[temp] = [];
+    //         result[temp].push(value);
+    //     });
+    //     return result;
+    // }
+
+    var group = function(fn, returnArray) {
+        return function(obj, iteratee) {
+            iteratee = cb(iteratee);
+            var result = returnArray ? [] : {};
+            __.each(obj, function(value, index) {
+                var key = iteratee(value, index, obj);
+                fn(result, value, key);
+            });
+            return result;
+        }
+    }
+
+    __.groupBy = group(function(result, value, key) {
+        if (!_.has(result, key)) result[key] = [];
+        result[key].push(value);
+    });
+
+    __.indexBy = group(function(result, value, key) {
+        result[key] = value;
+    });
+
+    __.countBy = group(function(result, value, key) {
+        if (!_.has(result, key)) result[key] = 0;
+        result[key]++;
+    });
+
+    __.partition = group(function(result, value, key) {
+        if (result[0] == null) result[0] = [];
+        if (result[1] == null) result[1] = [];
+        result[value ? 0 : 1].push(value);
+    }, true);
 
     __.matcher = __.matches = function(attrs) {
         attrs = __.extendOwn({}, attrs);
         return function(obj) {
             return __.isMatch(obj, attrs);
         };
+    };
+
+    var reStrSymbol = /[^\ud800-\udfff]|[\ud800-\udbff][\udc00-\udfff]|[\ud800-\udfff]/g;
+
+    __.toArray = function(obj) {
+        if (!obj) return [];
+        if (__.isArray(obj)) return slice.call(obj);
+        if (__.isString(obj)) return obj.match(reStrSymbol);
+        if (isArrayLike(obj)) return __.map(obj, __.identity);
+        return __.values(obj);
+    };
+
+    __.size = function(obj) {
+        if (obj == null) return 0;
+        return isArrayLike(obj) ? obj.length : __.keys(obj).length;
     };
 
     // 无法解决{c:2} == {c:2}为false的问题 待优化
@@ -231,27 +358,6 @@
         }
         return true;
     };
-
-    var createAssigner = function(keysFunc) {
-        return function(obj) {
-            var length = arguments.length;
-            if (length < 2 || obj == null) return obj;
-            for (var index = 1; index < length; index++) {
-                var source = arguments[index],
-                    keys = keysFunc(source),
-                    l = keys.length;
-                for (var i = 0; i < l; i++) {
-                    var key = keys[i];
-                    if (obj[key] === void 0) obj[key] = source[key];
-                }
-            }
-            return obj;
-        };
-    };
-
-    __.extend = createAssigner(__.allKeys);
-    __.extendOwn = __.assign = createAssigner(__.keys);
-
     __.negate = function(fn) {
         return function() {
             return !fn.apply(this, arguments);
@@ -292,11 +398,16 @@
 
     __.property = property;
 
-    // __.restArgs = restArgs;
     var isArrayLike = function(obj) {
         var length = obj['length'];
         return length && typeof length == 'number' && length >= 0;
     };
+
+    __.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp', 'Error', 'Symbol', 'Map', 'WeakMap', 'Set', 'WeakSet'], function(name) {
+        __['is' + name] = function(obj) {
+            return toString.call(obj) === '[object ' + name + ']';
+        };
+    });
 
     __.keys = function(obj) {
         if (!__.isObject(obj)) return [];
@@ -306,6 +417,19 @@
             if (__.has(obj, key)) keys.push(key);
         }
         return results;
+    };
+
+    __.random = function(min, max) {
+        if (max == null) {
+            max = min;
+            min = 0;
+        }
+        return min + Math.round(Math.random() * (max - min));
+    };
+
+    __.clone = function(obj) {
+        if (!__.isObject(obj)) return obj;
+        return __.isArray(obj) ? obj.slice() : __.extend({}, obj);
     };
 
     __.values = function(obj) {
@@ -328,6 +452,30 @@
         return results;
     };
 
+    //this method must be behind to the allKeys and keys
+    var createAssigner = function(keysFunc) {
+        return function(obj) {
+            var length = arguments.length;
+            if (length < 2 || obj == null) return obj;
+            for (var index = 1; index < length; index++) {
+                var source = arguments[index],
+                    keys = keysFunc(source),
+                    l = keys.length;
+                for (var i = 0; i < l; i++) {
+                    var key = keys[i];
+                    if (obj[key] === void 0) obj[key] = source[key];
+                }
+            }
+            return obj;
+        };
+    };
+
+    __.extend = createAssigner(__.allKeys);
+    __.extendOwn = __.assign = createAssigner(__.keys);
+
+    __.identity = function(value) {
+        return value;
+    };
     __.isFunction = function(obj) {
         return typeof obj == 'function' || false;
     };
@@ -340,6 +488,10 @@
         return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
     };
 
+    __.isArray = Array.isArray || function(obj) {
+        return toString.call(obj) === '[object Array]';
+    };
+
     __.has = function(obj, keys) {
         return obj != null && obj.hasOwnProperty(keys);
     };
@@ -348,4 +500,5 @@
         var type = typeof obj;
         return type === 'function' || type === 'object' && !!obj;
     };
+
 })();
