@@ -32,6 +32,19 @@
         return results;
     };
 
+    // var createReduce = function(obj, fn) {
+    //     var keys = !isArrayLike(obj) && __.keys(obj);
+    //     var length = (keys || obj).length;
+    //     var index = 0;
+    //     var results = obj[keys ? keys[index] : index];
+    //     index++;
+    //     for (; index >= 0 && index < length; index++) {
+    //         var currentKey = keys ? keys[index] : index;
+    //         results = fn(results, obj[currentKey], currentKey, obj);
+    //     }
+    //     return results;
+    // };
+
     var createReduce = function(dir) {
         var reducer = function(obj, fn, initial) {
             var keys = !isArrayLike(obj) && __.keys(obj);
@@ -55,10 +68,35 @@
     __.reduce = __.foldl = __.inject = createReduce(1);
     __.reduceRight = __.foldr = createReduce(-1);
 
+    // __.find = function(obj, fn) {
+    //     var keys = !isArrayLike(obj) && __.keys(obj);
+    //     var length = (keys || obj).length;
+    //     var results = Array(length);
+    //     for (var i = 0; i < length; i++) {
+    //         var currentKey = keys ? keys[i] : i;
+    //         if (fn(obj[currentKey], currentKey, obj)) {
+    //             return obj[currentKey];
+    //         }
+    //     }
+    //     return void 0;
+    // };
+
     __.find = function(obj, fn) {
         var key = isArrayLike(obj) ? __.findIndex(obj, fn) : __.findKey(obj, fn);
         if (key !== void 0 && key > -1) return obj[key];
     };
+
+    // __.filter = function(obj, fn) {
+    //     var isArray = isArrayLike(obj),
+    //         results;
+    //     results = isArray ? [] : {};
+    //     __.each(obj, function(value, index, list) {
+    //         if (fn(value, index, list)) {
+    //             var temp = isArray ? results.push(value) : results[index] = value;
+    //         }
+    //     });
+    //     return results;
+    // };
 
     __.filter = function(obj, fn) {
         var results = [];
@@ -92,6 +130,16 @@
         return false;
     };
 
+    // __.contains = __.include = __.includes = function(obj, item, fromIndex) {
+    //     var keys = !isArrayLike(obj) && __.keys(obj);
+    //     var length = (keys || obj).length;
+    //     for (var i = 0; i < length; i++) {
+    //         var currentKey = keys ? keys[i] : i;
+    //         if (item === obj[currentKey]) return true;
+    //     }
+    //     return false;
+    // };
+
     __.contains = __.include = __.includes = function(obj, item, fromIndex) {
         if (!isArrayLike(obj)) obj = __.keys(obj);
         if (typeof fromIndex != 'number') fromIndex = 0;
@@ -119,23 +167,47 @@
         });
     };
 
-    
+
+    // __.max = function(obj, iteratee) {
+    //     var result;
+    //     var resultIndex
+
+    //     __.each(obj, function(value, index) {
+    //         if (result == void 0) {
+    //             result = value;
+    //             resultIndex = index;
+    //         }
+    //         var temp = __.isFunction(iteratee) ? iteratee(value, index, obj) : value;
+    //         var resultTemp = __.isFunction(iteratee) ? iteratee(result, resultIndex, obj) : result;
+
+    //         if (temp > resultTemp) result = value;
+    //     })
+    //     return result;
+    // };
+
     __.max = function(obj, iteratee) {
-        var result;
-        var resultIndex
-
-        __.each(obj, function(value, index) {
-            if (index == 0) {
-                result = value;
-                resultIndex = 0;
+        var result = -Infinity,
+            lastComputed = -Infinity,
+            value, computed;
+        if (iteratee == null || (typeof iteratee == 'number' && typeof obj[0] != 'object') && obj != null) {
+            obj = isArrayLike(obj) ? obj : __.values(obj);
+            for (var i = 0, length = obj.length; i < length; i++) {
+                value = obj[i];
+                if (value != null && value > result) {
+                    result = value;
+                }
             }
-            var temp = __.isFunction(iteratee) ? iteratee(value, index, obj) : value;
-            var resultTemp = __.isFunction(iteratee) ? iteratee(result, resultIndex, obj) : result;
-
-            if (temp > resultTemp) result = value;
-        })
+        } else {
+            __.each(obj, function(v, index, list) {
+                computed = iteratee(v, index, list);
+                if (computed > lastComputed || result === -Infinity) {
+                    result = v;
+                    lastComputed = computed;
+                }
+            });
+        }
         return result;
-    }
+    };
 
 
 
