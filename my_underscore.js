@@ -346,6 +346,37 @@
         return isArrayLike(obj) ? obj.length : __.keys(obj).length;
     };
 
+
+    //begin Array method
+    __.first = __.head = __.take = function(array, n){
+        if(array == null || array.length < 1) return void 0;
+        if(n == null) return array[0];
+        return array.slice(0,n);
+    };
+
+    __.initial = function(array, n){
+        return array.slice(0, Math.max(0, array.length - (n == null ? 1 : n)));
+    };
+
+    __.last = function(array, n){
+        if(array == null || array.length < 1) return void 0;
+        if(n == null) return array[array.length - 1];
+        return array.slice(array.length - n);
+    };
+
+    __.rest = function(array, n){
+        return array.slice(Math.max(0, (n == null ? 1 :n)));
+    };
+
+    __.compact  = function(array){
+        return __.filter(array, Boolean);
+    };
+
+    var flatten = function(){};
+
+    __.flatten = flatten();
+
+
     // 无法解决{c:2} == {c:2}为false的问题 待优化
     __.isMatch = function(object, attrs) {
         var keys = __.keys(attrs);
