@@ -19,6 +19,28 @@
         return __.property(value);
     };
 
+    //a method that let the extra param combine to the rest which will be the last param
+    var restArgs = function(func, startIndex) {
+        startIndex = startIndex == null ? func.length - 1 : +startIndex;
+        return function() {
+            var length = Math.max(arguments.length - startIndex, 0),
+                rest = Array(length),
+                index = 0;
+            for (; index < length; index++) {
+                rest[index] = arguments[index + startIndex];
+            }
+
+            var args = Array(startIndex + 1);
+            for (index = 0; index < startIndex; index++) {
+                args[index] = arguments[index];
+            }
+            args[startIndex] = rest;
+            return func.apply(this, args);
+        }
+    };
+
+    __.restArgs = restArgs;
+
     __.each = __.foreach = function(obj, fn) {
         var keys = !isArrayLike(obj) && __.keys(obj);
         var length = (keys || obj).length;
@@ -165,13 +187,13 @@
         return __.map(obj, __.property(attrs));
     };
 
-    __.invoke = function(obj, method) {
+    __.invoke = restArgs(function(obj, method) {
         var isFunc = __.isFunction(method);
         return __.map(obj, function(value) {
             var func = isFunc ? method : value[method];
             return func == null ? func : func.apply(value);
         });
-    };
+    });
 
     // the min method is similar to the max method
     // __.max = function(obj, iteratee) {
@@ -348,34 +370,52 @@
 
 
     //begin Array method
-    __.first = __.head = __.take = function(array, n){
-        if(array == null || array.length < 1) return void 0;
-        if(n == null) return array[0];
-        return array.slice(0,n);
+    __.first = __.head = __.take = function(array, n) {
+        if (array == null || array.length < 1) return void 0;
+        if (n == null) return array[0];
+        return array.slice(0, n);
     };
 
-    __.initial = function(array, n){
+    __.initial = function(array, n) {
         return array.slice(0, Math.max(0, array.length - (n == null ? 1 : n)));
     };
 
-    __.last = function(array, n){
-        if(array == null || array.length < 1) return void 0;
-        if(n == null) return array[array.length - 1];
+    __.last = function(array, n) {
+        if (array == null || array.length < 1) return void 0;
+        if (n == null) return array[array.length - 1];
         return array.slice(array.length - n);
     };
 
-    __.rest = function(array, n){
-        return array.slice(Math.max(0, (n == null ? 1 :n)));
+    __.rest = function(array, n) {
+        return array.slice(Math.max(0, (n == null ? 1 : n)));
     };
 
-    __.compact  = function(array){
+    __.compact = function(array) {
         return __.filter(array, Boolean);
     };
 
-    var flatten = function(){};
+    var flatten = function(array, shallow, result, deepth) {
+        if (array == null || array.length < 1) return void 0;
+        for (var index = 0; index < array.length; index++) {
+            if (__.isArray(array[index]) && !(shallow && deepth == 3)) {
+                flatten(array[index], shallow, result, deepth + 1);
+            } else {
+                result.push(array[index]);
+            }
+        }
+        return result;
+    };
 
-    __.flatten = flatten();
+    __.flatten = function(array, shallow) {
+        return flatten(array, shallow, [], 1);
+    };
 
+    __.difference = restArgs(function(array, rest) {
+        rest = __.flatten(array, true);
+        return __.filter(array, function(value) {
+            return !__.contains(rest, value);
+        })
+    });
 
     // 无法解决{c:2} == {c:2}为false的问题 待优化
     __.isMatch = function(object, attrs) {
@@ -412,6 +452,18 @@
 
     __.findIndex = createPredicateIndexFinder(1);
     __.findLastIndex = createPredicateIndexFinder(-1);
+
+    // var createIndexFinder = function(dir, predicateFind, sortedIndex) {
+    //     return function(array, item, index){
+
+    //         if(typeof index == 'number'){
+
+    //         }else if(index){
+                
+    //         }
+    //     }
+    // }
+
 
     __.findKey = function(obj, fn) {
         var keys = __.keys(obj);
